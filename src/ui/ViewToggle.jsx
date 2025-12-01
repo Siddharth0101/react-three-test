@@ -12,7 +12,7 @@ export default function ViewToggle() {
                 position: "fixed",
                 top: 20,
                 left: 20,
-                zIndex: 9999,
+                zIndex: 999999,
                 background: "white",
                 border: "1px solid black",
                 padding: "6px 14px"

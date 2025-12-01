@@ -7,16 +7,22 @@ import ViewToggle from "./ui/ViewToggle";
 export default function App() {
   return (
     <Provider store={store}>
-      <ViewToggle />
-      <Canvas style={{
-        width: "100vw",
-        height: "100vh",
-        position: "absolute",
-        inset: 0,
-        zIndex: 1
-      }}>
-        <Scene />
-      </Canvas>
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        
+        <ViewToggle />
+        
+        <Canvas
+          style={{
+            width: "100vw",
+            height: "100vh",
+            position: "absolute",
+            inset: 0,
+            zIndex: 1
+          }}
+        >
+          <Scene />
+        </Canvas>
+      </div>
     </Provider>
   );
 }

@@ -22,6 +22,7 @@ export default function Scene() {
 
       {mode === "3d" ? (
         <>
+          {/* ===== 3D MODE ===== */}
           <PerspectiveCamera makeDefault position={[5, 5, 5]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[5, 5, 5]} />
@@ -29,16 +30,27 @@ export default function Scene() {
         </>
       ) : (
         <>
-          {/* Flat front orthographic camera */}
+          {/* ===== 2D MODE ===== */}
           <OrthographicCamera
             makeDefault
             position={[0, 0, 10]}
-            zoom={80}
+            zoom={80}     // base zoom level
           />
-          {/* no lights needed for basic line / basic materials */}
+
+          <OrbitControls
+            makeDefault={false} // IMPORTANT — so it doesn't override camera
+            enableRotate={false}
+            enablePan={true}
+            enableZoom={true}
+            zoomSpeed={0.5}
+            panSpeed={0.5}
+            minZoom={20}
+            maxZoom={200}
+          />
         </>
       )}
 
+      {/* Render scene objects */}
       {data.objects.map((obj) => (
         <ObjectRenderer key={obj.id} obj={obj} />
       ))}
