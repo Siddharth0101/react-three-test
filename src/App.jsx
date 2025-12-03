@@ -1,4 +1,4 @@
-// App.jsx
+// src/App.jsx
 import { Canvas } from "@react-three/fiber";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
@@ -10,11 +10,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-
-        {/* View Mode Toggle (2D / 3D) */}
         <ViewToggle />
-
-        {/* Tool Panel (Select / Line) */}
         <BottomPanel />
 
         <Canvas
@@ -23,12 +19,11 @@ export default function App() {
             height: "100vh",
             position: "absolute",
             inset: 0,
-            zIndex: 1
+            zIndex: 1,
           }}
         >
           <Scene />
         </Canvas>
-
       </div>
     </Provider>
   );

@@ -1,4 +1,4 @@
-// Scene.jsx
+// src/components/Scene.jsx
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import data from "../data/scene.json";
@@ -7,7 +7,7 @@ import ObjectRenderer from "./ObjectRenderer";
 import {
   OrbitControls,
   OrthographicCamera,
-  PerspectiveCamera
+  PerspectiveCamera,
 } from "@react-three/drei";
 
 import { useThree } from "@react-three/fiber";
@@ -16,57 +16,69 @@ import * as THREE from "three";
 import {
   startLine,
   addLinePoint,
-  resetLine
+  resetLine,
 } from "../store/toolSlice";
 
 import LinePreview from "./objects/LinePreview";
+import LineObj from "./objects/LineObj";
 
 export default function Scene() {
   const mode = useSelector((s) => s.viewMode.mode);
   const tool = useSelector((s) => s.tool);
   const dispatch = useDispatch();
 
-  const { camera, mouse } = useThree();
+  const { camera, gl } = useThree();
 
-  // mousePoint for preview line
+  // local state to store finished lines
+  const [drawnLines, setDrawnLines] = useState([]);
+  // mouse position in world space for preview
   const [mousePoint, setMousePoint] = useState(null);
 
-  // Convert screen click to XY world coords (Z=0 plane)
+  // Convert screen coords to world coords on Z=0 plane
   function getWorldPoint(event) {
     const raycaster = new THREE.Raycaster();
     const point = new THREE.Vector3();
 
-    const x = (event.clientX / window.innerWidth) * 2 - 1;
-    const y = -(event.clientY / window.innerHeight) * 2 + 1;
+    const rect = gl.domElement.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    mouse.x = x;
-    mouse.y = y;
+    raycaster.setFromCamera({ x, y }, camera);
 
-    raycaster.setFromCamera(mouse, camera);
-
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // z=0 plane
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // z = 0
     raycaster.ray.intersectPlane(plane, point);
 
     return [point.x, point.y, 0];
   }
 
-  // Handle clicks for line-drawing
+  // Click handler for line tool
   function handleCanvasClick(e) {
-     console.log("CLICK RECEIVED");
     if (mode !== "2d") return;
     if (tool.selectedTool !== "line") return;
 
     const p = getWorldPoint(e);
 
-    // AUTO CLOSE: if click near first point
+    // Auto-close if near the first point
     if (tool.currentPoints.length >= 2) {
       const [fx, fy] = tool.currentPoints[0];
       const [x, y] = p;
 
       const dist = Math.sqrt((fx - x) ** 2 + (fy - y) ** 2);
-      if (dist < 0.1) {
-        // add first point again to close
-        dispatch(addLinePoint(tool.currentPoints[0]));
+
+      // more generous distance so user can close shape easily
+      if (dist < 0.3) {
+        const closedPoints = [...tool.currentPoints, tool.currentPoints[0]];
+
+        // save closed polyline as permanent line object
+        setDrawnLines((prev) => [
+          ...prev,
+          {
+            id: "line-" + Date.now(),
+            type: "line",
+            points: closedPoints,
+          },
+        ]);
+
         dispatch(resetLine());
         setMousePoint(null);
         return;
@@ -80,12 +92,14 @@ export default function Scene() {
     }
   }
 
-  // Handle mouse movement → preview line point
+  // Mouse move handler for preview
   function handleCanvasMove(e) {
-    if (tool.isDrawing && tool.currentPoints.length > 0) {
-      const p = getWorldPoint(e);
-      setMousePoint(p);
-    }
+    if (mode !== "2d") return;
+    if (tool.selectedTool !== "line") return;
+    if (!tool.isDrawing || tool.currentPoints.length === 0) return;
+
+    const p = getWorldPoint(e);
+    setMousePoint(p);
   }
 
   return (
@@ -98,7 +112,7 @@ export default function Scene() {
 
       {mode === "3d" ? (
         <>
-          {/* 3D MODE */}
+          {/* ===== 3D MODE ===== */}
           <PerspectiveCamera makeDefault position={[5, 5, 5]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[5, 5, 5]} />
@@ -106,7 +120,7 @@ export default function Scene() {
         </>
       ) : (
         <>
-          {/* 2D MODE */}
+          {/* ===== 2D MODE ===== */}
           <OrthographicCamera
             makeDefault
             position={[0, 0, 10]}
@@ -124,24 +138,36 @@ export default function Scene() {
             maxZoom={200}
           />
 
-          {/* Attach pointer handlers ONLY in 2D mode */}
-            <mesh
-              position={[0, 0, 0]}
-              onPointerDown={handleCanvasClick}
-              onPointerMove={handleCanvasMove}
-            >
-              <planeGeometry args={[10000, 10000]} />
-              <meshBasicMaterial visible={false} />
-            </mesh>
+          {/* Invisible big plane to catch clicks & moves */}
+          <mesh
+            position={[0, 0, 0]}
+            onPointerDown={handleCanvasClick}
+            onPointerMove={handleCanvasMove}
+          >
+            <planeGeometry args={[10000, 10000]} />
+            <meshBasicMaterial visible={false} />
+          </mesh>
         </>
       )}
 
-      {/* Render scene objects from JSON */}
+      {/* Objects from JSON */}
       {data.objects.map((obj) => (
         <ObjectRenderer key={obj.id} obj={obj} />
       ))}
 
-      {/* PREVIEW LINE (only when drawing) */}
+      {/* Already-drawn permanent lines */}
+      {drawnLines.map((obj) => (
+        <ObjectRenderer key={obj.id} obj={obj} />
+      ))}
+
+      {/* Current polyline segments while drawing (previous lines visible) */}
+      {tool.isDrawing &&
+        tool.currentPoints.length >= 2 &&
+        mode === "2d" && (
+          <LineObj points={tool.currentPoints} />
+        )}
+
+      {/* Preview from last point -> mouse */}
       {tool.isDrawing && mousePoint && mode === "2d" && (
         <LinePreview mousePoint={mousePoint} />
       )}

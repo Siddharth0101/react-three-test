@@ -1,11 +1,12 @@
+// src/store/toolSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const toolSlice = createSlice({
   name: "tool",
   initialState: {
-    selectedTool: "select",   // "select" | "line"
+    selectedTool: "select", // "select" | "line"
     isDrawing: false,
-    currentPoints: [],
+    currentPoints: [],      // [[x,y,z], [x,y,z], ...] for active polyline
   },
   reducers: {
     selectLineTool(state) {
@@ -28,8 +29,8 @@ const toolSlice = createSlice({
     resetLine(state) {
       state.isDrawing = false;
       state.currentPoints = [];
-    }
-  }
+    },
+  },
 });
 
 export const {
@@ -37,7 +38,7 @@ export const {
   selectDefaultTool,
   startLine,
   addLinePoint,
-  resetLine
+  resetLine,
 } = toolSlice.actions;
 
 export default toolSlice.reducer;
