@@ -2,12 +2,15 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import data from "../data/scene.json";
+
 import ObjectRenderer from "./ObjectRenderer";
+import LinePreview from "./objects/LinePreview";
+import LineObj from "./objects/LineObj";
 
 import {
-  OrbitControls,
   OrthographicCamera,
   PerspectiveCamera,
+  OrbitControls,
 } from "@react-three/drei";
 
 import {
@@ -15,9 +18,6 @@ import {
   addLinePoint,
   resetLine,
 } from "../store/toolSlice";
-
-import LinePreview from "./objects/LinePreview";
-import LineObj from "./objects/LineObj";
 
 export default function Scene() {
   const mode = useSelector((s) => s.viewMode.mode);
@@ -27,127 +27,91 @@ export default function Scene() {
   const [drawnLines, setDrawnLines] = useState([]);
   const [mousePoint, setMousePoint] = useState(null);
 
-  // Convert pointer event to [x,y,z]
-  const worldPointFromEvent = (e) => {
-    return [e.point.x, e.point.y, e.point.z];
-  };
-
-  function handleCanvasClick(e) {
+  const handleCanvasClick = (e) => {
     if (mode !== "2d") return;
     if (tool.selectedTool !== "line") return;
 
-    const p = worldPointFromEvent(e);
+    const p = [e.point.x, e.point.y, e.point.z];
 
-    // Auto-close detection
     if (tool.currentPoints.length >= 2) {
       const [fx, fy] = tool.currentPoints[0];
       const [x, y] = p;
-
-      const dist = Math.sqrt((fx - x) ** 2 + (fy - y) ** 2);
+      const dist = Math.hypot(fx - x, fy - y);
 
       if (dist < 0.3) {
-        const closedPoints = [...tool.currentPoints, tool.currentPoints[0]];
-
+        const closed = [...tool.currentPoints, tool.currentPoints[0]];
         setDrawnLines((prev) => [
           ...prev,
-          {
-            id: "line-" + Date.now(),
-            type: "line",
-            points: closedPoints,
-          },
+          { id: "line-" + Date.now(), type: "line", points: closed },
         ]);
-
         dispatch(resetLine());
         setMousePoint(null);
         return;
       }
     }
 
-    // Start or add point
-    if (!tool.isDrawing) {
-      dispatch(startLine(p));
-    } else {
-      dispatch(addLinePoint(p));
-    }
-  }
+    !tool.isDrawing ? dispatch(startLine(p)) : dispatch(addLinePoint(p));
+  };
 
-  function handleCanvasMove(e) {
+  const handleCanvasMove = (e) => {
     if (mode !== "2d") return;
     if (tool.selectedTool !== "line") return;
-    if (!tool.isDrawing || tool.currentPoints.length === 0) return;
+    if (!tool.isDrawing) return;
+    if (tool.currentPoints.length === 0) return;
 
-    const p = worldPointFromEvent(e);
-    setMousePoint(p);
-  }
+    setMousePoint([e.point.x, e.point.y, e.point.z]);
+  };
+
+  const renderObjects = () => (
+    <>
+      {data.objects.map((o) => (
+        <ObjectRenderer key={o.id} obj={o} />
+      ))}
+      {drawnLines.map((o) => (
+        <ObjectRenderer key={o.id} obj={o} />
+      ))}
+      {tool.isDrawing && tool.currentPoints.length >= 2 && mode === "2d" && (
+        <LineObj points={tool.currentPoints} />
+      )}
+      {tool.isDrawing && mousePoint && mode === "2d" && (
+        <LinePreview mousePoint={mousePoint} />
+      )}
+    </>
+  );
 
   return (
     <>
-      {/* Background */}
-      <color
-        attach="background"
-        args={mode === "2d" ? ["#ffffff"] : ["#000000"]}
-      />
+      <color attach="background" args={[mode === "2d" ? "#ffffff" : "#000000"]} />
 
       {mode === "3d" ? (
         <>
-          {/* ===== 3D MODE ===== */}
           <PerspectiveCamera makeDefault position={[5, 5, 5]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[5, 5, 5]} />
           <OrbitControls />
+          {renderObjects()}
         </>
       ) : (
         <>
-          {/* ===== 2D MODE ===== */}
-          <OrthographicCamera
-            makeDefault
-            position={[0, 0, 10]}
-            zoom={80}
-          />
+          <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={80} />
 
           <OrbitControls
-            makeDefault={false}
             enableRotate={false}
-            enablePan={true}
-            enableZoom={true}
+            enablePan
+            enableZoom
             zoomSpeed={0.5}
             panSpeed={0.5}
             minZoom={20}
             maxZoom={200}
           />
 
-          {/* Invisible plane for interactions */}
-          <mesh
-            position={[0, 0, 0]}
-            onPointerDown={handleCanvasClick}
-            onPointerMove={handleCanvasMove}
-          >
+          <mesh onPointerDown={handleCanvasClick} onPointerMove={handleCanvasMove}>
             <planeGeometry args={[10000, 10000]} />
             <meshBasicMaterial visible={false} />
           </mesh>
+
+          {renderObjects()}
         </>
-      )}
-
-      {/* Objects from JSON */}
-      {data.objects.map((obj) => (
-        <ObjectRenderer key={obj.id} obj={obj} />
-      ))}
-
-      {/* Already drawn permanent lines */}
-      {drawnLines.map((obj) => (
-        <ObjectRenderer key={obj.id} obj={obj} />
-      ))}
-
-      {/* Draw current polyline */}
-      {tool.isDrawing &&
-        tool.currentPoints.length >= 2 &&
-        mode === "2d" && (
-          <LineObj points={tool.currentPoints} />
-        )}
-
-      {/* Draw preview line */}
-      {tool.isDrawing && mousePoint && mode === "2d" && (
-        <LinePreview mousePoint={mousePoint} />
       )}
     </>
   );
