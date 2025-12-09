@@ -10,9 +10,6 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 
-import { useThree } from "@react-three/fiber";
-import * as THREE from "three";
-
 import {
   startLine,
   addLinePoint,
@@ -27,49 +24,30 @@ export default function Scene() {
   const tool = useSelector((s) => s.tool);
   const dispatch = useDispatch();
 
-  const { camera, gl } = useThree();
-
-  // local state to store finished lines
   const [drawnLines, setDrawnLines] = useState([]);
-  // mouse position in world space for preview
   const [mousePoint, setMousePoint] = useState(null);
 
-  // Convert screen coords to world coords on Z=0 plane
-  function getWorldPoint(event) {
-    const raycaster = new THREE.Raycaster();
-    const point = new THREE.Vector3();
+  // Convert pointer event to [x,y,z]
+  const worldPointFromEvent = (e) => {
+    return [e.point.x, e.point.y, e.point.z];
+  };
 
-    const rect = gl.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    raycaster.setFromCamera({ x, y }, camera);
-
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // z = 0
-    raycaster.ray.intersectPlane(plane, point);
-
-    return [point.x, point.y, 0];
-  }
-
-  // Click handler for line tool
   function handleCanvasClick(e) {
     if (mode !== "2d") return;
     if (tool.selectedTool !== "line") return;
 
-    const p = getWorldPoint(e);
+    const p = worldPointFromEvent(e);
 
-    // Auto-close if near the first point
+    // Auto-close detection
     if (tool.currentPoints.length >= 2) {
       const [fx, fy] = tool.currentPoints[0];
       const [x, y] = p;
 
       const dist = Math.sqrt((fx - x) ** 2 + (fy - y) ** 2);
 
-      // more generous distance so user can close shape easily
       if (dist < 0.3) {
         const closedPoints = [...tool.currentPoints, tool.currentPoints[0]];
 
-        // save closed polyline as permanent line object
         setDrawnLines((prev) => [
           ...prev,
           {
@@ -85,6 +63,7 @@ export default function Scene() {
       }
     }
 
+    // Start or add point
     if (!tool.isDrawing) {
       dispatch(startLine(p));
     } else {
@@ -92,13 +71,12 @@ export default function Scene() {
     }
   }
 
-  // Mouse move handler for preview
   function handleCanvasMove(e) {
     if (mode !== "2d") return;
     if (tool.selectedTool !== "line") return;
     if (!tool.isDrawing || tool.currentPoints.length === 0) return;
 
-    const p = getWorldPoint(e);
+    const p = worldPointFromEvent(e);
     setMousePoint(p);
   }
 
@@ -138,7 +116,7 @@ export default function Scene() {
             maxZoom={200}
           />
 
-          {/* Invisible big plane to catch clicks & moves */}
+          {/* Invisible plane for interactions */}
           <mesh
             position={[0, 0, 0]}
             onPointerDown={handleCanvasClick}
@@ -155,19 +133,19 @@ export default function Scene() {
         <ObjectRenderer key={obj.id} obj={obj} />
       ))}
 
-      {/* Already-drawn permanent lines */}
+      {/* Already drawn permanent lines */}
       {drawnLines.map((obj) => (
         <ObjectRenderer key={obj.id} obj={obj} />
       ))}
 
-      {/* Current polyline segments while drawing (previous lines visible) */}
+      {/* Draw current polyline */}
       {tool.isDrawing &&
         tool.currentPoints.length >= 2 &&
         mode === "2d" && (
           <LineObj points={tool.currentPoints} />
         )}
 
-      {/* Preview from last point -> mouse */}
+      {/* Draw preview line */}
       {tool.isDrawing && mousePoint && mode === "2d" && (
         <LinePreview mousePoint={mousePoint} />
       )}
