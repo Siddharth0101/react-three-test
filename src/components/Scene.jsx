@@ -42,7 +42,18 @@ export default function Scene() {
         const closed = [...tool.currentPoints, tool.currentPoints[0]];
         setDrawnLines((prev) => [
           ...prev,
-          { id: "line-" + Date.now(), type: "line", points: closed },
+          {
+            id: "shape-" + Date.now(),
+            type: "extruded",
+            transform: {
+              position: [0, 0, 0],
+              rotation: [0, 0, 0],
+              scale: [1, 1, 1],
+            },
+            material: { color: "#ff6347" },
+            props: { depth: 1 }, // thickness!
+            points: closed, // your polyline
+          },
         ]);
         dispatch(resetLine());
         setMousePoint(null);
