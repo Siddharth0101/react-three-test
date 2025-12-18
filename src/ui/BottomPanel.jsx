@@ -1,6 +1,6 @@
 // src/ui/BottomPanel.jsx
 import { useDispatch, useSelector } from "react-redux";
-import { selectLineTool, selectDefaultTool } from "../store/toolSlice";
+import { selectDefaultTool } from "../store/toolSlice";
 
 export default function BottomPanel() {
   const dispatch = useDispatch();
@@ -32,16 +32,6 @@ export default function BottomPanel() {
         Select
       </button>
 
-      <button
-        onClick={() => dispatch(selectLineTool())}
-        style={{
-          padding: "6px 14px",
-          background: selectedTool === "line" ? "#d0d0d0" : "white",
-          border: "1px solid black",
-        }}
-      >
-        Line
-      </button>
     </div>
   );
 }
