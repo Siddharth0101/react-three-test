@@ -2,15 +2,13 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import data from "../data/scene.json";
-
 import ObjectRenderer from "./ObjectRenderer";
-
 import {
   OrthographicCamera,
   PerspectiveCamera,
   OrbitControls,
+  Grid,
 } from "@react-three/drei";
-
 
 export default function Scene() {
   const mode = useSelector((s) => s.viewMode.mode);
@@ -25,32 +23,60 @@ export default function Scene() {
 
   return (
     <>
-      <color attach="background" args={[mode === "2d" ? "#ffffff" : "#000000"]} />
+      <color attach="background" args={[mode === "2d" ? "#ffffff" : "#101010"]} />
 
       {mode === "3d" ? (
         <>
-          <PerspectiveCamera makeDefault position={[5, 5, 5]} />
+          <PerspectiveCamera makeDefault position={[10, 10, 10]} />
           <ambientLight intensity={0.7} />
-          <directionalLight position={[5, 5, 5]} />
-          <OrbitControls />
+          <directionalLight position={[10, 10, 5]} intensity={1} />
+          <OrbitControls makeDefault />
+
+          <Grid
+            position={[0, -0.01, 0]}
+            args={[20, 20]}
+            cellSize={0.5}
+            cellThickness={0.5}
+            cellColor="#2a2a2a"
+            sectionSize={5}
+            sectionThickness={1.2}
+            sectionColor="#4a4a4a"
+            fadeDistance={80}
+            fadeStrength={0.5}
+            infiniteGrid
+          />
+          
           {renderObjects()}
         </>
       ) : (
         <>
           <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={80} />
-
           <OrbitControls
             enableRotate={false}
             enablePan
             enableZoom
-            zoomSpeed={0.5}
-            panSpeed={0.5}
+            zoomSpeed={0.8}
             minZoom={20}
             maxZoom={200}
           />
 
-          <mesh>
-            <planeGeometry args={[10000, 10000]} />
+          <Grid
+            rotation={[Math.PI / 2, 0, 0]}
+            position={[0, 0, -0.1]}
+            args={[200, 200]}
+            cellSize={0.25}
+            sectionSize={1}
+            cellThickness={0.8}
+            sectionThickness={1.5}
+            cellColor="#e0e0e0"
+            sectionColor="#b0b0b0"
+            fadeDistance={200}
+            fadeStrength={0.4}
+            infiniteGrid={true}
+          />
+
+          <mesh position={[0, 0, -0.2]}>
+            <planeGeometry args={[1000, 1000]} />
             <meshBasicMaterial visible={false} />
           </mesh>
 
