@@ -1,5 +1,5 @@
 // src/components/Scene.jsx
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
 import data from "../data/scene.json";
 import ObjectRenderer from "./ObjectRenderer";
@@ -9,9 +9,34 @@ import {
   OrbitControls,
   Grid,
 } from "@react-three/drei";
+import * as THREE from "three";
 
 export default function Scene() {
   const mode = useSelector((s) => s.viewMode.mode);
+  const controls3dRef = useRef();
+  const controls2dRef = useRef();
+
+  // Enable zoom to cursor for 3D controls
+  useEffect(() => {
+    if (controls3dRef.current) {
+      // drei's OrbitControls ref gives direct access to the controls instance
+      const controls = controls3dRef.current;
+      if (controls) {
+        controls.zoomToCursor = true;
+      }
+    }
+  }, [mode]);
+
+  // Enable zoom to cursor for 2D controls
+  useEffect(() => {
+    if (controls2dRef.current) {
+      // drei's OrbitControls ref gives direct access to the controls instance
+      const controls = controls2dRef.current;
+      if (controls) {
+        controls.zoomToCursor = true;
+      }
+    }
+  }, [mode]);
 
   const renderObjects = () => (
     <>
@@ -30,7 +55,16 @@ export default function Scene() {
           <PerspectiveCamera makeDefault position={[10, 10, 10]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[10, 10, 5]} intensity={1} />
-          <OrbitControls makeDefault />
+          <OrbitControls
+            ref={controls3dRef}
+            makeDefault
+            zoomToCursor
+            mouseButtons={{
+              LEFT: THREE.MOUSE.ROTATE,
+              MIDDLE: THREE.MOUSE.DOLLY,
+              RIGHT: THREE.MOUSE.PAN,
+            }}
+          />
 
           <Grid
             position={[0, -0.01, 0]}
@@ -52,12 +86,19 @@ export default function Scene() {
         <>
           <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={80} />
           <OrbitControls
+            ref={controls2dRef}
             enableRotate={false}
             enablePan
             enableZoom
             zoomSpeed={0.8}
             minZoom={20}
             maxZoom={200}
+            zoomToCursor
+            mouseButtons={{
+              LEFT: THREE.MOUSE.PAN,
+              MIDDLE: THREE.MOUSE.DOLLY,
+              RIGHT: THREE.MOUSE.PAN,
+            }}
           />
 
           <Grid
