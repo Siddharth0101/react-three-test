@@ -6,9 +6,12 @@ const viewModeSlice = createSlice({
   reducers: {
     toggleMode(state) {
       state.mode = state.mode === "3d" ? "2d" : "3d";
-    }
-  }
+    },
+    setMode(state, action) {
+      state.mode = action.payload;
+    },
+  },
 });
 
-export const { toggleMode } = viewModeSlice.actions;
+export const { toggleMode, setMode } = viewModeSlice.actions;
 export default viewModeSlice.reducer;
