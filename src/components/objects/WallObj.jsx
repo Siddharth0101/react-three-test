@@ -17,8 +17,35 @@ export default function WallObj({ id, start, end, props, height: heightProp = 3,
   // Handle both formats: 
   // 1. start/end arrays (from wall tool)
   // 2. props.x1,y1,x2,y2 (from AI)
-  const wallStart = start || (props ? [props.x1, props.y1] : [0, 0]);
-  const wallEnd = end || (props ? [props.x2, props.y2] : [0, 0]);
+  // Ensure we always have valid numbers
+  const getWallStart = () => {
+    if (start && Array.isArray(start) && start.length >= 2 && 
+        typeof start[0] === 'number' && typeof start[1] === 'number' &&
+        !isNaN(start[0]) && !isNaN(start[1])) {
+      return start;
+    }
+    if (props && typeof props.x1 === 'number' && typeof props.y1 === 'number' &&
+        !isNaN(props.x1) && !isNaN(props.y1)) {
+      return [props.x1, props.y1];
+    }
+    return [0, 0];
+  };
+  
+  const getWallEnd = () => {
+    if (end && Array.isArray(end) && end.length >= 2 && 
+        typeof end[0] === 'number' && typeof end[1] === 'number' &&
+        !isNaN(end[0]) && !isNaN(end[1])) {
+      return end;
+    }
+    if (props && typeof props.x2 === 'number' && typeof props.y2 === 'number' &&
+        !isNaN(props.x2) && !isNaN(props.y2)) {
+      return [props.x2, props.y2];
+    }
+    return [0, 0];
+  };
+  
+  const wallStart = getWallStart();
+  const wallEnd = getWallEnd();
   const height = props?.height || heightProp;
   const thickness = props?.thickness || thicknessProp;
 

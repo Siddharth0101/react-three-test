@@ -9,6 +9,29 @@ export default function MiniMap() {
   const objects = useSelector((s) => s.scene.objects);
   const { camera } = useThree();
 
+  // Helper to extract wall coordinates - handles both formats
+  const getWallCoords = (wall) => {
+    // Format 1: start/end arrays (from wall tool)
+    if (wall.start && wall.end && Array.isArray(wall.start) && Array.isArray(wall.end)) {
+      return {
+        x1: wall.start[0],
+        y1: wall.start[1],
+        x2: wall.end[0],
+        y2: wall.end[1],
+      };
+    }
+    // Format 2: props.x1,y1,x2,y2 (from AI)
+    if (wall.props && typeof wall.props.x1 === 'number') {
+      return {
+        x1: wall.props.x1,
+        y1: wall.props.y1,
+        x2: wall.props.x2,
+        y2: wall.props.y2,
+      };
+    }
+    return null;
+  };
+
   const mapData = useMemo(() => {
     const walls = objects.filter((o) => o.type === "wall");
     const furniture = objects.filter((o) => o.type === "furniture");
@@ -19,21 +42,37 @@ export default function MiniMap() {
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
 
+    // Process walls with normalized coordinates
+    const processedWalls = [];
     walls.forEach((wall) => {
-      minX = Math.min(minX, wall.start[0], wall.end[0]);
-      maxX = Math.max(maxX, wall.start[0], wall.end[0]);
-      minY = Math.min(minY, wall.start[1], wall.end[1]);
-      maxY = Math.max(maxY, wall.start[1], wall.end[1]);
-    });
-
-    furniture.forEach((f) => {
-      if (f.position) {
-        minX = Math.min(minX, f.position[0]);
-        maxX = Math.max(maxX, f.position[0]);
-        minY = Math.min(minY, f.position[1]);
-        maxY = Math.max(maxY, f.position[1]);
+      const coords = getWallCoords(wall);
+      if (coords && !isNaN(coords.x1) && !isNaN(coords.y1) && !isNaN(coords.x2) && !isNaN(coords.y2)) {
+        processedWalls.push(coords);
+        minX = Math.min(minX, coords.x1, coords.x2);
+        maxX = Math.max(maxX, coords.x1, coords.x2);
+        minY = Math.min(minY, coords.y1, coords.y2);
+        maxY = Math.max(maxY, coords.y1, coords.y2);
       }
     });
+
+    // Process furniture - handle both f.position and f.props.position formats
+    const processedFurniture = [];
+    furniture.forEach((f) => {
+      const pos = f.position || f.props?.position;
+      if (pos && Array.isArray(pos) && pos.length >= 2 && !isNaN(pos[0]) && !isNaN(pos[1])) {
+        processedFurniture.push({ x: pos[0], y: pos[1] });
+        minX = Math.min(minX, pos[0]);
+        maxX = Math.max(maxX, pos[0]);
+        minY = Math.min(minY, pos[1]);
+        maxY = Math.max(maxY, pos[1]);
+      }
+    });
+
+    // If no valid walls or furniture, return null
+    if (processedWalls.length === 0 && processedFurniture.length === 0) return null;
+    
+    // If bounds are still infinite (no valid data), return null
+    if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) return null;
 
     const padding = 2;
     minX -= padding;
@@ -46,7 +85,7 @@ export default function MiniMap() {
     const mapSize = 150;
     const scale = mapSize / Math.max(worldWidth, worldHeight);
 
-    return { minX, minY, maxX, maxY, worldWidth, worldHeight, scale, mapSize, walls, furniture };
+    return { minX, minY, maxX, maxY, worldWidth, worldHeight, scale, mapSize, walls: processedWalls, furniture: processedFurniture };
   }, [objects]);
 
   if (mode !== "2d" || !mapData) return null;
@@ -107,33 +146,31 @@ export default function MiniMap() {
           height={mapSize}
           style={{ position: "absolute", top: 0, left: 0 }}
         >
-          {/* Walls */}
+          {/* Walls - now using normalized coords {x1, y1, x2, y2} */}
           {walls.map((wall, i) => (
             <line
               key={`wall-${i}`}
-              x1={toMapX(wall.start[0])}
-              y1={toMapY(wall.start[1])}
-              x2={toMapX(wall.end[0])}
-              y2={toMapY(wall.end[1])}
+              x1={toMapX(wall.x1)}
+              y1={toMapY(wall.y1)}
+              x2={toMapX(wall.x2)}
+              y2={toMapY(wall.y2)}
               stroke="#1a1a2e"
               strokeWidth="3"
               strokeLinecap="round"
             />
           ))}
 
-          {/* Furniture */}
+          {/* Furniture - now using normalized {x, y} */}
           {furniture.map((f, i) => (
-            f.position && (
-              <rect
-                key={`furn-${i}`}
-                x={toMapX(f.position[0]) - 3}
-                y={toMapY(f.position[1]) - 3}
-                width="6"
-                height="6"
-                fill="#8B4513"
-                rx="1"
-              />
-            )
+            <rect
+              key={`furn-${i}`}
+              x={toMapX(f.x) - 3}
+              y={toMapY(f.y) - 3}
+              width="6"
+              height="6"
+              fill="#8B4513"
+              rx="1"
+            />
           ))}
 
           {/* Viewport indicator */}

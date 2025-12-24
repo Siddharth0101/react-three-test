@@ -91,6 +91,7 @@ function Floor() {
 export default function Scene() {
   const mode = useSelector((s) => s.viewMode.mode);
   const sceneObjects = useSelector((s) => s.scene.objects);
+  const isDraggingObject = useSelector((s) => s.tool.isDraggingObject);
   const controls3dRef = useRef();
   const controls2dRef = useRef();
 
@@ -223,8 +224,8 @@ export default function Scene() {
       <OrbitControls
         ref={controls2dRef}
         enableRotate={false}
-        enablePan
-        enableZoom
+        enablePan={!isDraggingObject}
+        enableZoom={!isDraggingObject}
         zoomSpeed={0.8}
         minZoom={10}
         maxZoom={500}

@@ -10,6 +10,8 @@ const toolSlice = createSlice({
     // Selection state
     selectedObjectId: null,
     hoveredObjectId: null,
+    // Drag state - used to disable canvas panning while dragging objects
+    isDraggingObject: false,
   },
   reducers: {
     selectTool(state, action) {
@@ -37,6 +39,9 @@ const toolSlice = createSlice({
     setHoveredObject(state, action) {
       state.hoveredObjectId = action.payload;
     },
+    setDraggingObject(state, action) {
+      state.isDraggingObject = action.payload;
+    },
   },
 });
 
@@ -48,6 +53,7 @@ export const {
   selectObject,
   clearSelection,
   setHoveredObject,
+  setDraggingObject,
 } = toolSlice.actions;
 
 export default toolSlice.reducer;

@@ -1,9 +1,11 @@
 // src/components/objects/FurnitureObj.jsx
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import * as THREE from "three";
-import { selectObject } from "../../store/toolSlice";
+import { selectObject, setDraggingObject } from "../../store/toolSlice";
+import { updateObject } from "../../store/sceneSlice";
 
 // Furniture type definitions with shapes, colors, and visual details
 const FURNITURE_TYPES = {
@@ -898,6 +900,12 @@ function Bookshelf2D({ width, depth, config }) {
   );
 }
 
+// Snap value to grid
+const snapToGrid = (value, gridSize, enabled) => {
+  if (!enabled) return value;
+  return Math.round(value / gridSize) * gridSize;
+};
+
 // Main component
 export default function FurnitureObj({ 
   id, 
@@ -912,11 +920,24 @@ export default function FurnitureObj({
   const mode = useSelector((s) => s.viewMode.mode);
   const selectedTool = useSelector((s) => s.tool.selectedTool);
   const selectedObjectId = useSelector((s) => s.tool.selectedObjectId);
+  const snapEnabled = useSelector((s) => s.settings?.snapToGrid ?? true);
+  const gridSize = useSelector((s) => s.settings?.gridSize ?? 0.25);
+  
+  const { camera, raycaster, pointer } = useThree();
+  
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState([0, 0]);
+  const [dragPosition, setDragPosition] = useState(null);
+  const groupRef = useRef();
   
   // Handle both formats: direct props or nested props object
   const furnitureType = props?.furnitureType || furnitureTypeProp;
-  const position = props?.position || positionProp || [0, 0];
+  const basePosition = props?.position || positionProp || [0, 0];
   const rotation = props?.rotation ?? rotationProp;
+  
+  // Use drag position while dragging, otherwise use base position
+  const position = dragPosition || basePosition;
   
   const isSelected = selectedObjectId === id;
   const config = FURNITURE_TYPES[furnitureType] || FURNITURE_TYPES.chair;
@@ -924,6 +945,85 @@ export default function FurnitureObj({
   const width = customWidth || config.width;
   const depth = customDepth || config.depth;
   const height = config.height;
+
+  // Get world position from pointer
+  const getWorldPosition = useCallback(() => {
+    raycaster.setFromCamera(pointer, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const intersection = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, intersection);
+    return [intersection.x, intersection.y];
+  }, [camera, raycaster, pointer]);
+
+  const handlePointerDown = (e) => {
+    if (selectedTool === "select" && mode === "2d") {
+      e.stopPropagation();
+      
+      // Select the object
+      dispatch(selectObject(id));
+      
+      // Start dragging - notify globally to disable canvas panning
+      dispatch(setDraggingObject(true));
+      
+      const worldPos = getWorldPosition();
+      setDragOffset([worldPos[0] - basePosition[0], worldPos[1] - basePosition[1]]);
+      setIsDragging(true);
+      setDragPosition(basePosition);
+      
+      // Capture pointer for drag
+      e.target.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging || selectedTool !== "select") return;
+    
+    const worldPos = getWorldPosition();
+    let newX = worldPos[0] - dragOffset[0];
+    let newY = worldPos[1] - dragOffset[1];
+    
+    // Apply grid snapping
+    newX = snapToGrid(newX, gridSize, snapEnabled);
+    newY = snapToGrid(newY, gridSize, snapEnabled);
+    
+    setDragPosition([newX, newY]);
+  };
+
+  const handlePointerUp = (e) => {
+    if (isDragging) {
+      // Release pointer capture
+      e.target.releasePointerCapture(e.pointerId);
+      
+      // Stop dragging - re-enable canvas panning
+      dispatch(setDraggingObject(false));
+      
+      // Update the object position in the store
+      if (dragPosition && (dragPosition[0] !== basePosition[0] || dragPosition[1] !== basePosition[1])) {
+        // Handle both formats: direct position or props.position (AI-generated)
+        if (props?.position) {
+          // AI-generated format - update props.position
+          dispatch(updateObject({
+            id,
+            updates: { 
+              props: { 
+                ...props, 
+                position: dragPosition 
+              } 
+            },
+          }));
+        } else {
+          // Direct format - update position directly
+          dispatch(updateObject({
+            id,
+            updates: { position: dragPosition },
+          }));
+        }
+      }
+      
+      setIsDragging(false);
+      setDragPosition(null);
+    }
+  };
 
   const handleClick = (e) => {
     if (selectedTool === "select" && mode === "2d") {
@@ -967,17 +1067,37 @@ export default function FurnitureObj({
 
     return (
       <group 
-        position={[position[0], position[1], 0.1]} 
+        ref={groupRef}
+        position={[position[0], position[1], isDragging ? 0.5 : 0.1]} 
         rotation={[0, 0, rotation]}
         onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerOver={() => { if (selectedTool === "select") document.body.style.cursor = "move"; }}
+        onPointerOut={() => { document.body.style.cursor = "default"; }}
         userData={{ id, isSelectable: true }}
       >
         {/* Selection highlight */}
         {isSelected && (
           <mesh position={[0, 0, -0.02]}>
             <planeGeometry args={[width + 0.15, depth + 0.15]} />
-            <meshBasicMaterial color="#2196F3" transparent opacity={0.3} />
+            <meshBasicMaterial color={isDragging ? "#4CAF50" : "#2196F3"} transparent opacity={isDragging ? 0.5 : 0.3} />
           </mesh>
+        )}
+        
+        {/* Drag handles when selected */}
+        {isSelected && !isDragging && (
+          <>
+            {/* Corner handles */}
+            {[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([xDir, yDir], i) => (
+              <mesh key={i} position={[xDir * (width/2 + 0.05), yDir * (depth/2 + 0.05), 0.1]}>
+                <circleGeometry args={[0.06, 8]} />
+                <meshBasicMaterial color="#2196F3" />
+              </mesh>
+            ))}
+          </>
         )}
 
         {/* Render the specific furniture shape */}
