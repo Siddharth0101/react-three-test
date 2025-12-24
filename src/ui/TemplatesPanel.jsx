@@ -111,7 +111,7 @@ export default function TemplatesPanel() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          top: 70,
+          top: 120,
           left: 110,
           padding: "8px 14px",
           borderRadius: "10px",

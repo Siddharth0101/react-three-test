@@ -97,7 +97,7 @@ export default function ProjectManager({ onLoad }) {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          top: 70,
+          top: 120,
           left: 16,
           padding: "8px 14px",
           borderRadius: "10px",

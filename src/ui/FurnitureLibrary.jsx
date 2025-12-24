@@ -40,7 +40,7 @@ export default function FurnitureLibrary() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          top: 70,
+          top: 280,
           right: 16,
           padding: "8px 14px",
           borderRadius: "10px",
@@ -66,7 +66,7 @@ export default function FurnitureLibrary() {
         <div
           style={{
             position: "fixed",
-            top: 110,
+            top: 320,
             right: 16,
             width: "320px",
             maxHeight: "70vh",
