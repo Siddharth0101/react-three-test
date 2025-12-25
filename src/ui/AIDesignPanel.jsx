@@ -153,9 +153,9 @@ export default function AIDesignPanel() {
         onClick={() => setIsOpen(true)}
         style={{
           position: "fixed",
-          bottom: 80,
+          bottom: 110,
           left: 20,
-          zIndex: 1000,
+          zIndex: 999996,
           padding: "10px 16px",
           background: "linear-gradient(135deg, #F55036 0%, #FF8A65 100%)",
           color: "white",
@@ -189,11 +189,11 @@ export default function AIDesignPanel() {
     <div
       style={{
         position: "fixed",
-        bottom: 80,
+        bottom: 110,
         left: 20,
-        zIndex: 1000,
+        zIndex: 999996,
         width: 380,
-        maxHeight: "calc(100vh - 160px)",
+        maxHeight: "calc(100vh - 180px)",
         overflowY: "auto",
         background: "white",
         borderRadius: 12,

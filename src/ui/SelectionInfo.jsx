@@ -77,7 +77,7 @@ export default function SelectionInfo() {
     <div
       style={{
         position: "fixed",
-        bottom: 80,
+        bottom: 110,
         left: "50%",
         transform: "translateX(-50%)",
         background: "rgba(26, 26, 46, 0.95)",

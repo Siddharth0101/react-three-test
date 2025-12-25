@@ -6,6 +6,8 @@ import data from "../data/scene.json";
 import ObjectRenderer from "./ObjectRenderer";
 import WallTool from "./tools/WallTool";
 import DoorWindowTool from "./tools/DoorWindowTool";
+import TextTool from "./tools/TextTool";
+import MeasureTool from "./tools/MeasureTool";
 import FirstPersonControls from "./FirstPersonControls";
 import {
   OrthographicCamera,
@@ -15,6 +17,7 @@ import {
   Sky,
   Environment,
   Html,
+  ContactShadows,
 } from "@react-three/drei";
 import * as THREE from "three";
 import { clearSelection } from "../store/toolSlice";
@@ -123,14 +126,28 @@ export default function Scene() {
     </>
   );
 
-  // 3D Orbit View
+  // 3D Orbit View - Clean and simple
   if (mode === "3d") {
     return (
       <>
-        <color attach="background" args={["#101010"]} />
-        <PerspectiveCamera makeDefault position={[10, 10, 10]} />
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
+        <color attach="background" args={["#e8eef5"]} />
+        <PerspectiveCamera makeDefault position={[12, 10, 12]} />
+        <ambientLight intensity={0.6} />
+        <hemisphereLight
+          intensity={0.4}
+          color="#ffffff"
+          groundColor="#b8c4d4"
+        />
+        <directionalLight
+          position={[15, 20, 10]}
+          intensity={1}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-left={-20}
+          shadow-camera-right={20}
+          shadow-camera-top={20}
+          shadow-camera-bottom={-20}
+        />
         <OrbitControls
           ref={controls3dRef}
           makeDefault
@@ -142,18 +159,18 @@ export default function Scene() {
           }}
         />
 
-        <Grid
-          position={[0, -0.01, 0]}
-          args={[20, 20]}
-          cellSize={0.5}
-          cellThickness={0.5}
-          cellColor="#2a2a2a"
-          sectionSize={5}
-          sectionThickness={1.2}
-          sectionColor="#4a4a4a"
-          fadeDistance={80}
-          fadeStrength={0.5}
-          infiniteGrid
+        {/* Simple clean floor */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+          <planeGeometry args={[100, 100]} />
+          <meshStandardMaterial color="#d4dce8" roughness={0.95} />
+        </mesh>
+
+        <ContactShadows
+          position={[0, 0.002, 0]}
+          opacity={0.25}
+          scale={60}
+          blur={2.5}
+          far={20}
         />
 
         {renderStaticObjects()}
@@ -250,6 +267,8 @@ export default function Scene() {
       <WallTool />
       <DoorWindowTool />
       <FurnitureTool />
+      <TextTool />
+      <MeasureTool />
       
       {/* Zoom Controls UI */}
       <ZoomControlsUI />
@@ -292,7 +311,7 @@ function ZoomControlsUI() {
       calculatePosition={() => [0, 0]}
       style={{
         position: "fixed",
-        bottom: "80px",
+        bottom: "108px",
         left: "16px",
       }}
     >

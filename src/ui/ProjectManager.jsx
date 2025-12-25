@@ -97,7 +97,7 @@ export default function ProjectManager({ onLoad }) {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          top: 120,
+          top: 200,
           left: 16,
           padding: "8px 14px",
           borderRadius: "10px",
@@ -111,7 +111,7 @@ export default function ProjectManager({ onLoad }) {
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          zIndex: 999998,
+          zIndex: 999997,
           transition: "all 0.2s ease",
         }}
         title="Project Manager"
@@ -124,7 +124,7 @@ export default function ProjectManager({ onLoad }) {
         <div
           style={{
             position: "fixed",
-            top: 110,
+            top: 240,
             left: 16,
             width: "300px",
             background: "rgba(255, 255, 255, 0.98)",

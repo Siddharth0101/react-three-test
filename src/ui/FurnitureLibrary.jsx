@@ -40,8 +40,8 @@ export default function FurnitureLibrary() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          top: 280,
-          right: 16,
+          top: 200,
+          left: 230,
           padding: "8px 14px",
           borderRadius: "10px",
           background: isOpen ? "#1a1a2e" : "rgba(255, 255, 255, 0.95)",
@@ -54,7 +54,7 @@ export default function FurnitureLibrary() {
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          zIndex: 999998,
+          zIndex: 999997,
           transition: "all 0.2s ease",
         }}
       >
@@ -66,8 +66,8 @@ export default function FurnitureLibrary() {
         <div
           style={{
             position: "fixed",
-            top: 320,
-            right: 16,
+            top: 240,
+            left: 230,
             width: "320px",
             maxHeight: "70vh",
             background: "rgba(255, 255, 255, 0.98)",

@@ -160,7 +160,7 @@ export default function ExportPanel({ canvasRef }) {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: "fixed",
-          bottom: 16,
+          bottom: 46,
           right: 70,
           padding: "10px 16px",
           borderRadius: "10px",
@@ -185,7 +185,7 @@ export default function ExportPanel({ canvasRef }) {
         <div
           style={{
             position: "fixed",
-            bottom: 60,
+            bottom: 90,
             right: 70,
             width: "220px",
             background: "rgba(255, 255, 255, 0.98)",

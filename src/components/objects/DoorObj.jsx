@@ -1,24 +1,29 @@
 // src/components/objects/DoorObj.jsx
 import { useMemo } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Line } from "@react-three/drei";
 import * as THREE from "three";
+import { selectObject } from "../../store/toolSlice";
 
 export default function DoorObj({
+  id,
   wallId,
   position,
   width: widthProp = 0.9,
   height: heightProp = 2.1,
+  swingDirection = 1, // 1 = inward, -1 = outward
+  hingeSide = "left", // "left" or "right"
   props, // AI-generated format
 }) {
+  const dispatch = useDispatch();
   const mode = useSelector((s) => s.viewMode.mode);
+  const selectedTool = useSelector((s) => s.tool.selectedTool);
+  const selectedObjectId = useSelector((s) => s.tool.selectedObjectId);
   const walls = useSelector((s) =>
     s.scene.objects.filter((o) => o.type === "wall")
   );
 
-  // Handle both formats:
-  // 1. wallId + position (from door tool)
-  // 2. props.x, y, angle, width (from AI)
+  const isSelected = selectedObjectId === id;
   const width = props?.width || widthProp;
   const height = props?.height || heightProp;
 
@@ -36,8 +41,8 @@ export default function DoorObj({
         wallLength: 1,
         nx: -Math.sin(angle),
         ny: Math.cos(angle),
-        wallThickness: 0.15,
-        wallHeight: 3,
+        wallThickness: props?.thickness || 0.15,
+        wallHeight: props?.wallHeight || 3,
       };
     }
 
@@ -54,21 +59,30 @@ export default function DoorObj({
     const dx = x2 - x1;
     const dy = y2 - y1;
     const wallLength = Math.sqrt(dx * dx + dy * dy);
+    
+    if (wallLength === 0) return null;
+    
     const angle = Math.atan2(dy, dx);
 
-    // Door center position along wall (0-1)
+    // Unit direction vector along wall
+    const ux = dx / wallLength;
+    const uy = dy / wallLength;
+
+    // Door center position along wall (position is 0-1 along wall)
     const doorX = x1 + dx * position;
     const doorY = y1 + dy * position;
 
-    // Normal vector for door swing indication
-    const nx = -dy / wallLength;
-    const ny = dx / wallLength;
+    // Normal vector (perpendicular to wall, for swing direction)
+    const nx = -uy;
+    const ny = ux;
 
     return {
       x: doorX,
       y: doorY,
       angle,
       wallLength,
+      ux,
+      uy,
       nx,
       ny,
       wallThickness: wall.props?.thickness || wall.thickness || 0.15,
@@ -78,31 +92,65 @@ export default function DoorObj({
 
   if (!doorGeometry) return null;
 
-  const { x, y, angle, wallThickness, wallHeight } = doorGeometry;
+  const { x, y, angle, wallThickness, wallHeight, nx, ny, ux, uy } = doorGeometry;
   const halfWidth = width / 2;
 
-  // 2D mode - show door symbol
-  if (mode === "2d") {
-    // Door swing arc points
-    const arcPoints = [];
-    const arcSegments = 20;
-    const swingAngle = Math.PI / 2;
-    const startAngle = angle;
+  // Handle click for selection
+  const handleClick = (e) => {
+    if (selectedTool === "select" && mode === "2d") {
+      e.stopPropagation();
+      dispatch(selectObject(id));
+    }
+  };
 
+  // 2D mode - show door symbol with proper architectural representation
+  if (mode === "2d") {
+    // Hinge position (left or right side of door)
+    const hingeOffset = hingeSide === "left" ? -halfWidth : halfWidth;
+    const hingeX = x + Math.cos(angle) * hingeOffset;
+    const hingeY = y + Math.sin(angle) * hingeOffset;
+    
+    // Door swing direction
+    const swingDir = swingDirection * (hingeSide === "left" ? 1 : -1);
+    
+    // Door swing arc points - starts from hinge
+    const arcPoints = [];
+    const arcSegments = 24;
+    const swingAngle = Math.PI / 2;
+    
+    // Calculate end point of door when open (90 degrees from wall)
     for (let i = 0; i <= arcSegments; i++) {
-      const t = (i / arcSegments) * swingAngle;
+      const t = (i / arcSegments) * swingAngle * swingDir;
+      const doorEndAngle = angle + (hingeSide === "left" ? 0 : Math.PI);
       arcPoints.push([
-        x - Math.cos(angle) * halfWidth + Math.cos(startAngle + t) * width,
-        y - Math.sin(angle) * halfWidth + Math.sin(startAngle + t) * width,
+        hingeX + Math.cos(doorEndAngle + t) * width,
+        hingeY + Math.sin(doorEndAngle + t) * width,
         0.15,
       ]);
     }
 
+    // Door panel line (closed position)
+    const doorStartX = hingeX;
+    const doorStartY = hingeY;
+    const doorEndX = x + Math.cos(angle) * (hingeSide === "left" ? halfWidth : -halfWidth);
+    const doorEndY = y + Math.sin(angle) * (hingeSide === "left" ? halfWidth : -halfWidth);
+
+    const doorColor = isSelected ? "#2563eb" : "#5c4033";
+    const arcColor = isSelected ? "#60a5fa" : "#8b5a2b";
+
     return (
-      <group>
+      <group onClick={handleClick}>
+        {/* Selection highlight */}
+        {isSelected && (
+          <mesh position={[x, y, 0.01]} rotation={[0, 0, angle]}>
+            <planeGeometry args={[width + 0.15, wallThickness * 3.5]} />
+            <meshBasicMaterial color="#2563eb" transparent opacity={0.15} />
+          </mesh>
+        )}
+
         {/* Door opening (gap in wall) - white rectangle to cover wall */}
         <mesh position={[x, y, 0.02]} rotation={[0, 0, angle]}>
-          <planeGeometry args={[width + 0.02, wallThickness * 3]} />
+          <planeGeometry args={[width + 0.04, wallThickness * 3]} />
           <meshBasicMaterial color="#ffffff" />
         </mesh>
 
@@ -115,8 +163,8 @@ export default function DoorObj({
           ]}
           rotation={[0, 0, angle]}
         >
-          <planeGeometry args={[0.04, wallThickness * 1.2]} />
-          <meshBasicMaterial color="#5c4033" />
+          <planeGeometry args={[0.05, wallThickness * 1.3]} />
+          <meshBasicMaterial color={doorColor} />
         </mesh>
 
         {/* Door jamb right */}
@@ -128,38 +176,49 @@ export default function DoorObj({
           ]}
           rotation={[0, 0, angle]}
         >
-          <planeGeometry args={[0.04, wallThickness * 1.2]} />
-          <meshBasicMaterial color="#5c4033" />
+          <planeGeometry args={[0.05, wallThickness * 1.3]} />
+          <meshBasicMaterial color={doorColor} />
         </mesh>
 
-        {/* Door panel (closed position shown as line) */}
+        {/* Door panel (closed position shown as thick line) */}
         <Line
           points={[
-            [
-              x - Math.cos(angle) * halfWidth,
-              y - Math.sin(angle) * halfWidth,
-              0.15,
-            ],
-            [
-              x - Math.cos(angle) * halfWidth + Math.cos(angle) * width,
-              y - Math.sin(angle) * halfWidth + Math.sin(angle) * width,
-              0.15,
-            ],
+            [doorStartX, doorStartY, 0.15],
+            [doorEndX, doorEndY, 0.15],
           ]}
-          color="#8b5a2b"
-          lineWidth={3}
+          color={doorColor}
+          lineWidth={4}
           worldUnits={false}
         />
+
+        {/* Hinge indicator */}
+        <mesh position={[hingeX, hingeY, 0.18]}>
+          <circleGeometry args={[0.04, 12]} />
+          <meshBasicMaterial color={doorColor} />
+        </mesh>
 
         {/* Door swing arc */}
         <Line
           points={arcPoints}
-          color="#8b5a2b"
-          lineWidth={1}
+          color={arcColor}
+          lineWidth={1.5}
           worldUnits={false}
           dashed
-          dashSize={0.08}
-          gapSize={0.04}
+          dashSize={0.06}
+          gapSize={0.03}
+        />
+
+        {/* Door at open position (faint) */}
+        <Line
+          points={[
+            [hingeX, hingeY, 0.12],
+            [arcPoints[arcPoints.length - 1][0], arcPoints[arcPoints.length - 1][1], 0.12],
+          ]}
+          color={arcColor}
+          lineWidth={2}
+          worldUnits={false}
+          transparent
+          opacity={0.4}
         />
       </group>
     );
@@ -194,10 +253,7 @@ export default function DoorObj({
       </mesh>
 
       {/* Door panel - closed position */}
-      <group
-        position={[0, 0, 0]}
-        rotation={[0, 0, 0]}
-      >
+      <group position={[0, 0, 0]} rotation={[0, 0, 0]}>
         {/* Main door panel */}
         <mesh position={[0, actualHeight / 2, 0]}>
           <boxGeometry args={[width - 0.02, actualHeight - 0.02, doorThickness]} />

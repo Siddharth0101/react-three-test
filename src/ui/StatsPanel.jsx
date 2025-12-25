@@ -71,7 +71,7 @@ export default function StatsPanel() {
     <div
       style={{
         position: "fixed",
-        top: 16,
+        top: 70,
         right: 16,
         background: "rgba(255, 255, 255, 0.95)",
         backdropFilter: "blur(10px)",
@@ -79,7 +79,7 @@ export default function StatsPanel() {
         borderRadius: "12px",
         boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
         border: "1px solid rgba(0,0,0,0.1)",
-        zIndex: 999998,
+        zIndex: 999997,
         minWidth: "180px",
         fontSize: "13px",
       }}
