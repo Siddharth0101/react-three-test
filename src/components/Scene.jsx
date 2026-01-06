@@ -247,8 +247,6 @@ export default function Scene() {
         <planeGeometry args={[1000, 1000]} />
         <meshBasicMaterial visible={false} />
       </mesh>
-
-      {renderStaticObjects()}
       {renderDynamicObjects()}
 
       <WallTool />
