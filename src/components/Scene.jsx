@@ -2,7 +2,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useFrame, useThree } from "@react-three/fiber";
-import data from "../data/scene.json";
 import ObjectRenderer from "./ObjectRenderer";
 import WallTool from "./tools/WallTool";
 import DoorWindowTool from "./tools/DoorWindowTool";
@@ -110,14 +109,6 @@ export default function Scene() {
     }
   }, [mode]);
 
-  const renderStaticObjects = () => (
-    <>
-      {data.objects.map((o) => (
-        <ObjectRenderer key={o.id} obj={o} />
-      ))}
-    </>
-  );
-
   const renderDynamicObjects = () => (
     <>
       {sceneObjects.map((o) => (
@@ -172,8 +163,6 @@ export default function Scene() {
           blur={2.5}
           far={20}
         />
-
-        {renderStaticObjects()}
         {renderDynamicObjects()}
       </>
     );
@@ -226,8 +215,6 @@ export default function Scene() {
           fadeStrength={1}
           infiniteGrid
         />
-
-        {renderStaticObjects()}
         {renderDynamicObjects()}
       </>
     );
